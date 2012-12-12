@@ -1,7 +1,7 @@
 # lein-bikeshed
 
-A Leiningen plugin designed to tell you when your code is bad, and
-that you should feel bad.
+A Leiningen plugin designed to tell you your code is bad, and that you
+should feel bad.
 
 ## Usage
 
