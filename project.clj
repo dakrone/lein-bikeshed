@@ -1,4 +1,4 @@
-(defproject lein-bikeshed "0.1.0"
+(defproject lein-bikeshed "0.1.1-SNAPSHOT"
   :description "A Leiningen plugin designed to tell you your code is bad, and that you should feel bad"
   :url "https://github.com/dakrone/lein-bikeshed"
   :license {:name "Eclipse Public License"
