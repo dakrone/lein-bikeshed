@@ -31,7 +31,7 @@
                           (println (.trim out))
                           true)
                       (println "No files found.")))
-        _ (println "\nChecking for redefined var roots is source directories.")
+        _ (println "\nChecking for redefined var roots in source directories.")
         bad-roots (let [cmd (str "find " source-dirs " -name \\*.clj | "
                                  "xargs egrep -H -n '(\\(with-redefs)'")
                         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
