@@ -23,7 +23,7 @@ Checking for files ending in blank lines.
 Badly formatted files:
 /Users/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj
 
-Checking for redefined var roots is source directories.
+Checking for redefined var roots in source directories.
 with-redefs found in source directory:
 /Users/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj:11: (with-redefs [+ -]
 /Users/hinmanm/src/clj/lein-bikeshed/src/leiningen/bikeshed.clj:36: "xargs egrep -H -n '(\\(with-redefs)'")
