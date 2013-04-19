@@ -8,10 +8,10 @@ should feel bad.
 Add to your ~/.lein/profiles.clj:
 
 ```clojure
-{:user {:plugins [[lein-bikeshed "0.1.0"]]}}
+{:user {:plugins [[lein-bikeshed "0.1.1"]]}}
 ```
 
-Just run `lein bikeshed` on your project:
+Just run `lein bikeshed` or `lein bikeshed -v` on your project:
 
 ```
 ∴ lein bikeshed
@@ -23,10 +23,14 @@ Checking for files ending in blank lines.
 Badly formatted files:
 /Users/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj
 
-Checking for redefined var roots is source directories.
+Checking for redefined var roots in source directories.
 with-redefs found in source directory:
 /Users/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj:11: (with-redefs [+ -]
 /Users/hinmanm/src/clj/lein-bikeshed/src/leiningen/bikeshed.clj:36: "xargs egrep -H -n '(\\(with-redefs)'")
+
+Checking whether you keep up with your docstrings.
+5/7 [71.43%] functions have docstrings.
+Use -v to list functions without docstrings
 ```
 
 ## License
