@@ -2,8 +2,8 @@
   (:use clojure.test
         bikeshed.core))
 
-(deftest a-test
-  (testing "FIXME, I fail."
+(deftest a-test	
+  (testing "FIXME, I fail, and I have trailing whitespace!"   
     (is (= 0 1))))
 
 
