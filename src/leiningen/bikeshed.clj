@@ -5,7 +5,7 @@
   "Bikesheds your project with totally arbitrary criteria."
   (lein/eval-in-project
    (-> project
-       (update-in [:dependencies] conj ['lein-bikeshed "0.1.1"]))
+       (update-in [:dependencies] conj ['lein-bikeshed "0.1.2-SNAPSHOT"]))
    `(if (bikeshed.core/bikeshed '~project (= "-v" '~arg))
       (System/exit -1)
       (System/exit 0))
