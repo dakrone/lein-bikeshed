@@ -44,7 +44,7 @@
 (defn long-lines
   "Complain about lines longer than 80 characters."
   [all-dirs]
-  (println "Checking for lines longer than 80 characters.")
+  (println "\nChecking for lines longer than 80 characters.")
   (let [cmd (str "find " all-dirs " -name "
                  "'*.clj' | xargs egrep -H -n '^.{81,}$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
@@ -58,7 +58,7 @@
 (defn trailing-whitespace
   "Complain about lines with trailing whitespace."
   [all-dirs]
-  (println "Checking for lines with trailing whitespace.")
+  (println "\nChecking for lines with trailing whitespace.")
   (let [cmd (str "find " all-dirs " -name "
                  "'*.clj' | xargs grep -H -n '[ \t]$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
