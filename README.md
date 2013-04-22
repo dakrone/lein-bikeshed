@@ -8,29 +8,35 @@ should feel bad.
 Add to your ~/.lein/profiles.clj:
 
 ```clojure
-{:user {:plugins [[lein-bikeshed "0.1.1"]]}}
+{:user {:plugins [[lein-bikeshed "0.1.2"]]}}
 ```
 
 Just run `lein bikeshed` or `lein bikeshed -v` on your project:
 
 ```
 ∴ lein bikeshed
+
 Checking for lines longer than 80 characters.
 Badly formatted files:
-/Users/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj:10:(def this-thing-is-over-eighty-characters-long "yep, it certainly is over eighty characters long")
+/home/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj:10:(def this-thing-is-over-eighty-characters-long "yep, it certainly is over eighty characters long")
+
+Checking for lines with trailing whitespace.
+Badly formatted files:
+/home/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj:5:(deftest a-test /home/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj:6: (testing "FIXME, I fail, and I have trailing whitespace!"
 
 Checking for files ending in blank lines.
 Badly formatted files:
-/Users/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj
+/home/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj
+/home/hinmanm/src/clj/lein-bikeshed/test/bikeshed/core_test.clj
 
 Checking for redefined var roots in source directories.
 with-redefs found in source directory:
-/Users/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj:11: (with-redefs [+ -]
-/Users/hinmanm/src/clj/lein-bikeshed/src/leiningen/bikeshed.clj:36: "xargs egrep -H -n '(\\(with-redefs)'")
+/home/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj:17: (with-redefs [+ -]
+/home/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj:92: "xargs egrep -H -n '(\\(with-redefs)'")
 
 Checking whether you keep up with your docstrings.
-5/7 [71.43%] functions have docstrings.
-Use -v to list functions without docstrings
+10/12 [83.33%] functions have docstrings.
+Use -v to list functions without docstrings")")))
 ```
 
 ## License
