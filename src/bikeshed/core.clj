@@ -21,6 +21,11 @@
   []
   nil)
 
+(defn empty-docstring
+  "" ;; hah! take that lein-bikeshed
+  []
+  nil)
+
 (defn read-namespace
   "Reads a file, returning a map of the namespace to a vector of maps with
   information about each var in the namespace."
@@ -39,7 +44,8 @@
 (defn has-doc
   "Returns a map of method name to true/false depending on docstring occurance."
   [name]
-  {(str name) (boolean (:doc (meta name)))})
+  {(str name) (and (boolean (:doc (meta name)))
+                   (not= "" (:doc (meta name))))})
 
 (defn long-lines
   "Complain about lines longer than 80 characters."
@@ -139,4 +145,3 @@
         bad-roots (bad-roots source-dirs)
         bad-methods (missing-doc-strings project verbose)]
     (or long-lines trailing-whitespace trailing-blank-lines bad-roots)))
-
