@@ -109,28 +109,31 @@
   "Report the percentage of missing doc strings."
   [project verbose]
   (println "\nChecking whether you keep up with your docstrings.")
-  (let [source-files (mapcat #(-> % io/file ns-find/find-clojure-sources-in-dir)
-                             (:source-paths project))
-        all-publics (mapcat read-namespace source-files)
-        no-docstrings (->> all-publics
-                           (mapcat has-doc)
-                           (filter #(= (val %) false)))]
-    (printf
-     (str "%d/%d [%.2f%%] functions have docstrings.\n"
-          (when (not verbose)
-            "Use -v to list functions without docstrings\n"))
-     (- (count all-publics) (count no-docstrings))
-     (count all-publics)
-     (double
-      (* 100 (/ (- (count all-publics)
-                   (count no-docstrings))
-                (count all-publics)))))
-    (flush)
-    (when verbose
-      (println "\nMethods without docstrings:")
-      (doseq [[method _] (sort no-docstrings)]
-        (println method)))
-    (-> no-docstrings count pos?)))
+  (try
+    (let [source-files (mapcat #(-> % io/file ns-find/find-clojure-sources-in-dir)
+                              (:source-paths project))
+         all-publics (mapcat read-namespace source-files)
+         no-docstrings (->> all-publics
+                            (mapcat has-doc)
+                            (filter #(= (val %) false)))]
+     (printf
+      (str "%d/%d [%.2f%%] functions have docstrings.\n"
+           (when (not verbose)
+             "Use -v to list functions without docstrings\n"))
+      (- (count all-publics) (count no-docstrings))
+      (count all-publics)
+      (double
+       (* 100 (/ (- (count all-publics)
+                    (count no-docstrings))
+                 (count all-publics)))))
+     (flush)
+     (when verbose
+       (println "\nMethods without docstrings:")
+       (doseq [[method _] (sort no-docstrings)]
+         (println method)))
+     (-> no-docstrings count pos?))
+    (catch Throwable t
+      (println "Sorry, I wasn't able to read your source files -" t))))
 
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
