@@ -5,7 +5,9 @@
             [clojure.tools.namespace.file :as ns-file]
             [clojure.tools.namespace.find :as ns-find])
   (:import (java.io BufferedReader StringReader)))
-
+;
+; (require :reload-all '[bikeshed.core]) (ns bikeshed.core)
+;
 (defn foo
   "I don't do a whole lot."
   [x]
@@ -48,11 +50,12 @@
                    (not= "" (:doc (meta name))))})
 
 (defn long-lines
-  "Complain about lines longer than 80 characters."
-  [all-dirs]
-  (println "\nChecking for lines longer than 80 characters.")
+  "Complain about lines longer than <max-line-length> characters.
+  max-line-length defaults to 80."
+  [all-dirs & {:keys [max-line-length] :or {max-line-length 80}}]
+  (println (format "\nChecking for lines longer than %s characters." max-line-length))
   (let [cmd (str "find " all-dirs " -name "
-                 "'*.clj' | xargs egrep -H -n '^.{81,}$'")
+                 "'*.clj' | xargs egrep -H -n '^.{" max-line-length ",}$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
     (if your-code-is-formatted-wrong
@@ -138,13 +141,15 @@
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
   code has been bikeshedded and found wanting."
-  [project verbose]
-  (let [source-dirs (clojure.string/join " " (:source-paths project))
+  [project & opts]
+  (let [options (first opts)
+        source-dirs (clojure.string/join " " (:source-paths project))
         test-dirs (clojure.string/join " " (:test-paths project))
         all-dirs (str source-dirs " " test-dirs)
-        long-lines (long-lines all-dirs)
+        long-lines (if (nil? (:max-line-length options)) (long-lines all-dirs)
+                     (long-lines all-dirs :max-line-length (:max-line-length options)))
         trailing-whitespace (trailing-whitespace all-dirs)
         trailing-blank-lines (trailing-blank-lines all-dirs)
         bad-roots (bad-roots source-dirs)
-        bad-methods (missing-doc-strings project verbose)]
+        bad-methods (missing-doc-strings project (:verbose options))]
     (or long-lines trailing-whitespace trailing-blank-lines bad-roots)))
