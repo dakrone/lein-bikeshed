@@ -11,7 +11,7 @@ Add to your ~/.lein/profiles.clj:
 {:user {:plugins [[lein-bikeshed "0.1.3"]]}}
 ```
 
-Just run `lein bikeshed` or `lein bikeshed -v` on your project:
+Just run `lein bikeshed` on your project:
 
 ```
 ∴ lein bikeshed
@@ -38,6 +38,14 @@ Checking whether you keep up with your docstrings.
 10/12 [83.33%] functions have docstrings.
 Use -v to list functions without docstrings")")))
 ```
+
+## Options
+
+| Switches                    | Default | Desc                        |
+| --------------------------- | ------- | --------------------------- |
+| -H, --no-help-me, --help-me | false   | Show help                   |
+| -v, --no-verbose, --verbose | false   | Display missing doc strings |
+| -m, --max-line-length       |         | Max line length             |
 
 ## License
 
