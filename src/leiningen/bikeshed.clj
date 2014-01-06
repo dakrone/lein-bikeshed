@@ -6,7 +6,7 @@
   "Bikesheds your project with totally arbitrary criteria."
   (lein/eval-in-project
    (-> project
-       (update-in [:dependencies] conj ['lein-bikeshed "0.1.4"]))
+       (update-in [:dependencies] conj ['lein-bikeshed "0.1.5-SNAPSHOT"]))
    `(let [[opts# args# banner#]
           (cli '~args
                ["-H" "--help-me" "Show help"
