@@ -5,7 +5,7 @@
   "Bikesheds your project with totally arbitrary criteria."
   (lein/eval-in-project
    (-> project
-       (update-in [:dependencies] conj ['lein-bikeshed "0.1.6"]))
+       (update-in [:dependencies] conj ['lein-bikeshed "0.1.7-SNAPSHOT"]))
    `(let [[opts# args# banner#]
           (clojure.tools.cli/cli
            '~args
