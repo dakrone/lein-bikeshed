@@ -1,5 +1,4 @@
 (ns leiningen.bikeshed
-  (:use [clojure.tools.cli :only (cli)])
   (:require [leiningen.core.eval :as lein]))
 
 (defn bikeshed [project & args]
@@ -8,13 +7,14 @@
    (-> project
        (update-in [:dependencies] conj ['lein-bikeshed "0.1.5-SNAPSHOT"]))
    `(let [[opts# args# banner#]
-          (cli '~args
-               ["-H" "--help-me" "Show help"
-                :flag true :default false]
-               ["-v" "--verbose" "Display missing doc strings"
-                :flag true :default false]
-               ["-m" "--max-line-length" "Max line length"
-                :default nil])]
+          (clojure.tools.cli/cli
+           '~args
+           ["-H" "--help-me" "Show help"
+            :flag true :default false]
+           ["-v" "--verbose" "Display missing doc strings"
+            :flag true :default false]
+           ["-m" "--max-line-length" "Max line length"
+            :default nil])]
       '~project
       (when (:help-me opts#)
         (println banner#)
@@ -24,4 +24,6 @@
                       :verbose (:verbose opts#)})
         (System/exit -1)
         (System/exit 0)))
-   '(require 'bikeshed.core)))
+   '(do
+      (require 'bikeshed.core)
+      (require 'clojure.tools.cli))))
