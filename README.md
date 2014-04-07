@@ -8,7 +8,7 @@ should feel bad.
 Add to your ~/.lein/profiles.clj:
 
 ```clojure
-{:user {:plugins [[lein-bikeshed "0.1.6"]]}}
+{:user {:plugins [[lein-bikeshed "0.1.7"]]}}
 ```
 
 Just run `lein bikeshed` on your project:
