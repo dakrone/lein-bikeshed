@@ -14,7 +14,8 @@
            ["-v" "--verbose" "Display missing doc strings"
             :flag true :default false]
            ["-m" "--max-line-length" "Max line length"
-            :default nil])]
+            :default nil
+            :parse-fn #(Integer/parseInt %)])]
       '~project
       (when (:help-me opts#)
         (println banner#)
