@@ -1,8 +1,10 @@
 (ns leiningen.bikeshed
   (:require [leiningen.core.eval :as lein]))
 
+(defn help []
+  "Bikesheds your project with totally arbitrary criteria.")
+
 (defn bikeshed [project & args]
-  "Bikesheds your project with totally arbitrary criteria."
   (lein/eval-in-project
    (-> project
        (update-in [:dependencies] conj ['lein-bikeshed "0.1.8-SNAPSHOT"]))
