@@ -9,6 +9,8 @@
 
 (def this-thing-is-over-eighty-characters-long "yep, it certainly is over eighty characters long")
 
+(def a "≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡")
+
 lot's of extra newlines:
 
 
