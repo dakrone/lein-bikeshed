@@ -26,6 +26,10 @@
   []
   nil)
 
+(def filename-regex
+  "Gnu `find' regex for files that should be checked"
+  "'*.clj*'")
+
 (defn read-namespace
   "Reads a file, returning a map of the namespace to a vector of maps with
   information about each var in the namespace."
@@ -54,7 +58,8 @@
   (printf "\nChecking for lines longer than %s characters.\n" max-line-length)
   (let [max-line-length (inc max-line-length)
         cmd (str "find " all-dirs " -name "
-                 "'*.clj' | xargs egrep -H -n '^.{" max-line-length ",}$'")
+                 filename-regex
+                 " | xargs egrep -H -n '^.{" max-line-length ",}$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
     (if your-code-is-formatted-wrong
@@ -68,7 +73,7 @@
   [all-dirs]
   (println "\nChecking for lines with trailing whitespace.")
   (let [cmd (str "find " all-dirs " -name "
-                 "'*.clj' | xargs grep -H -n '[ \t]$'")
+                 filename-regex " | xargs grep -H -n '[ \t]$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
     (if your-code-is-formatted-wrong
@@ -81,7 +86,7 @@
   "Complain about files ending with blank lines."
   [all-dirs]
   (println "\nChecking for files ending in blank lines.")
-  (let [cmd (str "find " all-dirs " -name '*.clj' "
+  (let [cmd (str "find " all-dirs " -name " filename-regex " "
                  "-exec tail -1 \\{\\} \\; -print "
                  "| egrep -A 1 '^\\s*$' | egrep 'clj|sql'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
@@ -96,7 +101,7 @@
   "Complain about the use of with-redefs."
   [source-dirs]
   (println "\nChecking for redefined var roots in source directories.")
-  (let [cmd (str "find " source-dirs " -name \\*.clj | "
+  (let [cmd (str "find " source-dirs " -name " filename-regex " | "
                  "xargs egrep -H -n '(\\(with-redefs)'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         lines (line-seq (BufferedReader. (StringReader. out)))]
