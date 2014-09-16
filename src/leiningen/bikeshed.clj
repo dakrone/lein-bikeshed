@@ -7,7 +7,7 @@
 (defn bikeshed [project & args]
   (lein/eval-in-project
    (-> project
-       (update-in [:dependencies] conj ['lein-bikeshed "0.1.8"]))
+       (update-in [:dependencies] conj ['lein-bikeshed "0.1.9-SNAPSHOT"]))
    `(let [[opts# args# banner#]
           (clojure.tools.cli/cli
            '~args
