@@ -130,10 +130,12 @@
              "Use -v to list functions without docstrings\n"))
       (- (count all-publics) (count no-docstrings))
       (count all-publics)
-      (double
-       (* 100 (/ (- (count all-publics)
-                    (count no-docstrings))
-                 (count all-publics)))))
+      (try
+        (double
+            (* 100 (/ (- (count all-publics)
+                         (count no-docstrings))
+                      (count all-publics))))
+        (catch ArithmeticException _ Double/NaN)))
      (flush)
      (when verbose
        (println "\nMethods without docstrings:")
