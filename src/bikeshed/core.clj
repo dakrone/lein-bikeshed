@@ -26,6 +26,21 @@
   []
   nil)
 
+(defn- get-all
+  "Returns all the values found for the LOOKED-UP-KEY passed as an argument
+  recursively walking the MAP-TO-TRAVERSE provideed as argument"
+  [map-to-traverse looked-up-key]
+  (let [result (atom [])]
+    (doseq [[k v] map-to-traverse]
+      (when (= looked-up-key k)
+        (swap! result conj v))
+      (when (map? v)
+        (let [sub-map (get-all v looked-up-key)]
+          (when-not (empty? sub-map)
+            (reset! result
+                    (apply conj @result sub-map))))))
+    @result))
+
 (def filename-regex
   "Gnu `find' regex for files that should be checked"
   "'*.clj*'")
@@ -150,7 +165,7 @@
   code has been bikeshedded and found wanting."
   [project & opts]
   (let [options (first opts)
-        source-dirs (clojure.string/join " " (:source-paths project))
+        source-dirs (clojure.string/join " " (flatten (get-all project :source-paths)))
         test-dirs (clojure.string/join " " (:test-paths project))
         all-dirs (str source-dirs " " test-dirs)
         long-lines (if (nil? (:max-line-length options))
