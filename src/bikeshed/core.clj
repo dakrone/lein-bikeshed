@@ -28,14 +28,14 @@
 
 (defn- get-all
   "Returns all the values found for the LOOKED-UP-KEY passed as an argument
-  recursively walking the MAP provideed as argument"
-  [map key]
+  recursively walking the MAP-TO-TRAVERSE provideed as argument"
+  [map-to-traverse looked-up-key]
   (let [result (atom [])]
-    (doseq [[k v] map]
-      (when (= key k)
+    (doseq [[k v] map-to-traverse]
+      (when (= looked-up-key k)
         (swap! result conj v))
       (when (map? v)
-        (let [sub-map (get-all v key)]
+        (let [sub-map (get-all v looked-up-key)]
           (when-not (empty? sub-map)
             (reset! result
                     (apply conj @result sub-map))))))
