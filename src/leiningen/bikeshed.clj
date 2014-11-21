@@ -1,10 +1,14 @@
 (ns leiningen.bikeshed
   (:require [leiningen.core.eval :as lein]))
 
-(defn help []
+(defn help
+  "Help text displayed from the command line"
+  []
   "Bikesheds your project with totally arbitrary criteria.")
 
-(defn bikeshed [project & args]
+(defn bikeshed
+  "Main function called from Leiningen"
+  [project & args]
   (lein/eval-in-project
    (-> project
        (update-in [:dependencies] conj ['lein-bikeshed "0.1.9-SNAPSHOT"]))
