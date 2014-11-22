@@ -28,7 +28,7 @@
 
 (defn- get-all
   "Returns all the values found for the LOOKED-UP-KEY passed as an argument
-  recursively walking the MAP-TO-TRAVERSE provideed as argument"
+  recursively walking the MAP-TO-TRAVERSE provided as argument"
   [map-to-traverse looked-up-key]
   (let [result (atom [])]
     (doseq [[k v] map-to-traverse]
