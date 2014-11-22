@@ -67,9 +67,9 @@
 
 (defn has-doc
   "Returns a map of method name to true/false depending on docstring occurance."
-  [name]
-  {(str name) (and (boolean (:doc (meta name)))
-                   (not= "" (:doc (meta name))))})
+  [function-name]
+  {(str function-name) (and (boolean (:doc (meta function-name)))
+                            (not= "" (:doc (meta function-name))))})
 
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
