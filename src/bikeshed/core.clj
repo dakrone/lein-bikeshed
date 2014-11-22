@@ -26,6 +26,11 @@
   []
   nil)
 
+(defn colliding-arguments
+  "Arguments will be colliding"
+  ([map])
+  ([map first]))
+
 (defn- get-all
   "Returns all the values found for the LOOKED-UP-KEY passed as an argument
   recursively walking the MAP-TO-TRAVERSE provided as argument"
@@ -160,6 +165,38 @@
     (catch Throwable t
       (println "Sorry, I wasn't able to read your source files -" t))))
 
+(defn- wrong-arguments
+  "Return the lsit of wrong arguments for the provided function name"
+  [function-name list-of-forbidden-arguments]
+  (let [arguments (-> function-name meta :arglists)]
+    (distinct (flatten (map (fn [args]
+                    (filter #(some (set [%]) list-of-forbidden-arguments)
+                            args))
+                  arguments)))))
+
+(defn- check-all-arguments
+  "Check if the arguments for functions collide
+  with function from clojure/core"
+  [project]
+  (println "\nChecking for arguments colliding with clojure.core functions.")
+  (let [core-functions (-> 'clojure.core ns-publics keys)
+        source-files   (mapcat #(-> % io/file
+                                    ns-find/find-clojure-sources-in-dir)
+                               (flatten (get-all project :source-paths)))
+        all-publics    (mapcat read-namespace source-files)
+        failing        (atom false)]
+    (doseq [function all-publics]
+      (let [args (wrong-arguments function core-functions)]
+        (when-not (empty? args)
+          (reset! failing true)
+          (if (= 1 (count args))
+            (println (str function ": '" (first args) "'")
+                     "is colliding with a core function")
+            (println (str function ": '"
+                     (clojure.string/join "', '" args) "'")
+                     "are colliding with core functions")))))
+    @failing))
+
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
   code has been bikeshedded and found wanting."
@@ -176,5 +213,10 @@
         trailing-whitespace (trailing-whitespace all-dirs)
         trailing-blank-lines (trailing-blank-lines all-dirs)
         bad-roots (bad-roots source-dirs)
-        bad-methods (missing-doc-strings project (:verbose options))]
-    (or long-lines trailing-whitespace trailing-blank-lines bad-roots)))
+        bad-methods (missing-doc-strings project (:verbose options))
+        bad-arguments (check-all-arguments project)]
+    (or bad-arguments
+        long-lines
+        trailing-whitespace
+        trailing-blank-lines
+        bad-roots)))
