@@ -134,7 +134,7 @@
   (try
     (let [source-files (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
-                              (:source-paths project))
+                              (flatten (get-all project :source-paths)))
          all-publics (mapcat read-namespace source-files)
          no-docstrings (->> all-publics
                             (mapcat has-doc)
