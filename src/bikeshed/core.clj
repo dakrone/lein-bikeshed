@@ -166,7 +166,7 @@
       (println "Sorry, I wasn't able to read your source files -" t))))
 
 (defn- wrong-arguments
-  "Return the lsit of wrong arguments for the provided function name"
+  "Return the list of wrong arguments for the provided function name"
   [function-name list-of-forbidden-arguments]
   (let [arguments (-> function-name meta :arglists)]
     (distinct (flatten (map (fn [args]
