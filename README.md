@@ -37,6 +37,9 @@ with-redefs found in source directory:
 Checking whether you keep up with your docstrings.
 10/12 [83.33%] functions have docstrings.
 Use -v to list functions without docstrings")")))
+
+Checking for arguments colliding with clojure.core functions.
+#'bikeshed.core/colliding-arguments: 'map', 'first' are colliding with core functions
 ```
 
 ## Options
