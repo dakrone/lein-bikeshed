@@ -26,9 +26,14 @@
   []
   nil)
 
+(defn colliding-arguments
+  "Arguments will be colliding"
+  ([map])
+  ([map first]))
+
 (defn- get-all
   "Returns all the values found for the LOOKED-UP-KEY passed as an argument
-  recursively walking the MAP-TO-TRAVERSE provideed as argument"
+  recursively walking the MAP-TO-TRAVERSE provided as argument"
   [map-to-traverse looked-up-key]
   (let [result (atom [])]
     (doseq [[k v] map-to-traverse]
@@ -62,9 +67,9 @@
 
 (defn has-doc
   "Returns a map of method name to true/false depending on docstring occurance."
-  [name]
-  {(str name) (and (boolean (:doc (meta name)))
-                   (not= "" (:doc (meta name))))})
+  [function-name]
+  {(str function-name) (and (boolean (:doc (meta function-name)))
+                            (not= "" (:doc (meta function-name))))})
 
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
@@ -160,6 +165,39 @@
     (catch Throwable t
       (println "Sorry, I wasn't able to read your source files -" t))))
 
+(defn- wrong-arguments
+  "Return the list of wrong arguments for the provided function name"
+  [function-name list-of-forbidden-arguments]
+  (let [arguments (-> function-name meta :arglists)]
+    (distinct (flatten (map (fn [args]
+                    (filter #(some (set [%]) list-of-forbidden-arguments)
+                            args))
+                  arguments)))))
+
+(defn- check-all-arguments
+  "Check if the arguments for functions collide
+  with function from clojure/core"
+  [project]
+  (println "\nChecking for arguments colliding with clojure.core functions.")
+  (let [core-functions (-> 'clojure.core ns-publics keys)
+        source-files   (mapcat #(-> % io/file
+                                    ns-find/find-clojure-sources-in-dir)
+                               (flatten (get-all project :source-paths)))
+        all-publics    (mapcat read-namespace source-files)]
+    (->> all-publics
+         (map (fn [function]
+                (let [args (wrong-arguments function core-functions)]
+                  (when (seq args)
+                    (if (= 1 (count args))
+                      (println (str function ": '" (first args) "'")
+                               "is colliding with a core function")
+                      (println (str function ": '"
+                                    (clojure.string/join "', '" args) "'")
+                               "are colliding with core functions")))
+                  (count args))))
+         (apply +)
+         (pos?))))
+
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
   code has been bikeshedded and found wanting."
@@ -176,5 +214,10 @@
         trailing-whitespace (trailing-whitespace all-dirs)
         trailing-blank-lines (trailing-blank-lines all-dirs)
         bad-roots (bad-roots source-dirs)
-        bad-methods (missing-doc-strings project (:verbose options))]
-    (or long-lines trailing-whitespace trailing-blank-lines bad-roots)))
+        bad-methods (missing-doc-strings project (:verbose options))
+        bad-arguments (check-all-arguments project)]
+    (or bad-arguments
+        long-lines
+        trailing-whitespace
+        trailing-blank-lines
+        bad-roots)))
