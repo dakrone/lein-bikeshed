@@ -139,29 +139,29 @@
   (try
     (let [source-files (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
-                              (flatten (get-all project :source-paths)))
-         all-publics (mapcat read-namespace source-files)
-         no-docstrings (->> all-publics
-                            (mapcat has-doc)
-                            (filter #(= (val %) false)))]
-     (printf
-      (str "%d/%d [%.2f%%] functions have docstrings.\n"
-           (when (not verbose)
-             "Use -v to list functions without docstrings\n"))
-      (- (count all-publics) (count no-docstrings))
-      (count all-publics)
-      (try
-        (double
-            (* 100 (/ (- (count all-publics)
-                         (count no-docstrings))
-                      (count all-publics))))
-        (catch ArithmeticException _ Double/NaN)))
-     (flush)
-     (when verbose
-       (println "\nMethods without docstrings:")
-       (doseq [[method _] (sort no-docstrings)]
-         (println method)))
-     (-> no-docstrings count pos?))
+                               (flatten (get-all project :source-paths)))
+          all-publics (mapcat read-namespace source-files)
+          no-docstrings (->> all-publics
+                             (mapcat has-doc)
+                             (filter #(= (val %) false)))]
+      (printf
+       (str "%d/%d [%.2f%%] functions have docstrings.\n"
+            (when (not verbose)
+              "Use -v to list functions without docstrings\n"))
+       (- (count all-publics) (count no-docstrings))
+       (count all-publics)
+       (try
+         (double
+          (* 100 (/ (- (count all-publics)
+                       (count no-docstrings))
+                    (count all-publics))))
+         (catch ArithmeticException _ Double/NaN)))
+      (flush)
+      (when verbose
+        (println "\nMethods without docstrings:")
+        (doseq [[method _] (sort no-docstrings)]
+          (println method)))
+      (-> no-docstrings count pos?))
     (catch Throwable t
       (println "Sorry, I wasn't able to read your source files -" t))))
 
@@ -170,9 +170,10 @@
   [function-name list-of-forbidden-arguments]
   (let [arguments (-> function-name meta :arglists)]
     (distinct (flatten (map (fn [args]
-                    (filter #(some (set [%]) list-of-forbidden-arguments)
-                            args))
-                  arguments)))))
+                              (filter #(some (set [%])
+                                             list-of-forbidden-arguments)
+                                      args))
+                            arguments)))))
 
 (defn- check-all-arguments
   "Check if the arguments for functions collide
@@ -203,7 +204,8 @@
   code has been bikeshedded and found wanting."
   [project & opts]
   (let [options (first opts)
-        source-dirs (clojure.string/join " " (flatten (get-all project :source-paths)))
+        source-dirs (clojure.string/join " " (flatten
+                                              (get-all project :source-paths)))
         test-dirs (clojure.string/join " " (:test-paths project))
         all-dirs (str source-dirs " " test-dirs)
         long-lines (if (nil? (:max-line-length options))
