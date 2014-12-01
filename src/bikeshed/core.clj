@@ -183,19 +183,20 @@
         source-files   (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
                                (flatten (get-all project :source-paths)))
-        all-publics    (mapcat read-namespace source-files)
-        failing        (atom false)]
-    (doseq [function all-publics]
-      (let [args (wrong-arguments function core-functions)]
-        (when-not (empty? args)
-          (reset! failing true)
-          (if (= 1 (count args))
-            (println (str function ": '" (first args) "'")
-                     "is colliding with a core function")
-            (println (str function ": '"
-                     (clojure.string/join "', '" args) "'")
-                     "are colliding with core functions")))))
-    @failing))
+        all-publics    (mapcat read-namespace source-files)]
+    (->> all-publics
+         (map (fn [function]
+                (let [args (wrong-arguments function core-functions)]
+                  (when (seq args)
+                    (if (= 1 (count args))
+                      (println (str function ": '" (first args) "'")
+                               "is colliding with a core function")
+                      (println (str function ": '"
+                                    (clojure.string/join "', '" args) "'")
+                               "are colliding with core functions")))
+                  (count args))))
+         (apply +)
+         (pos?))))
 
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
