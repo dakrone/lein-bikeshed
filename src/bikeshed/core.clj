@@ -1,4 +1,5 @@
 (ns bikeshed.core
+  "Define all the functionalities of bikeshed"
   (:require [clojure.string :refer [blank?]]
             [clojure.java.io :as io]
             [clojure.java.shell]
