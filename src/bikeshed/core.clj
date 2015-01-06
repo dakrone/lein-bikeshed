@@ -162,7 +162,7 @@
                                (flatten (get-all project :source-paths)))
           all-namespaces (->> source-files
                               (map load-namespace)
-                              (filter #(not= % nil)))
+                              (remove nil?))
           all-publics (mapcat read-namespace source-files)
           no-docstrings (->> all-publics
                              (mapcat has-doc)
