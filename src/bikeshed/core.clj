@@ -61,7 +61,7 @@
       ns-name)
     (catch Exception e
       (println (str "Unable to parse " f ": " e))
-      [])))
+      nil)))
 
 (defn read-namespace
   "Reads a file, returning a map of the namespace to a vector of maps with
@@ -160,7 +160,9 @@
     (let [source-files (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
                                (flatten (get-all project :source-paths)))
-          all-namespaces (map load-namespace source-files)
+          all-namespaces (->> source-files
+                              (map load-namespace)
+                              (filter #(not= % nil)))
           all-publics (mapcat read-namespace source-files)
           no-docstrings (->> all-publics
                              (mapcat has-doc)
