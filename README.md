@@ -8,7 +8,7 @@ should feel bad.
 Add to your ~/.lein/profiles.clj:
 
 ```clojure
-{:user {:plugins [[lein-bikeshed "0.2.0"]]}}
+{:user {:plugins [[lein-bikeshed "0.3.0"]]}}
 ```
 
 Just run `lein bikeshed` on your project:
@@ -35,6 +35,7 @@ with-redefs found in source directory:
 /home/hinmanm/src/clj/lein-bikeshed/src/bikeshed/core.clj:92: "xargs egrep -H -n '(\\(with-redefs)'")
 
 Checking whether you keep up with your docstrings.
+1/2 [50.00%] namespaces have docstrings.
 10/12 [83.33%] functions have docstrings.
 Use -v to list functions without docstrings")")))
 
