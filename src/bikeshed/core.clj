@@ -1,4 +1,5 @@
 (ns bikeshed.core
+  "Define all the functionalities of bikeshed"
   (:require [clojure.string :refer [blank?]]
             [clojure.java.io :as io]
             [clojure.java.shell]
@@ -50,6 +51,18 @@
   "Gnu `find' regex for files that should be checked"
   "'*.clj*'")
 
+(defn load-namespace
+  "Reads a file, returning the namespace name"
+  [f]
+  (try
+    (let [ns-dec (ns-file/read-file-ns-decl f)
+          ns-name (second ns-dec)]
+      (require ns-name)
+      ns-name)
+    (catch Exception e
+      (println (str "Unable to parse " f ": " e))
+      nil)))
+
 (defn read-namespace
   "Reads a file, returning a map of the namespace to a vector of maps with
   information about each var in the namespace."
@@ -70,6 +83,13 @@
   [function-name]
   {(str function-name) (and (boolean (:doc (meta function-name)))
                             (not= "" (:doc (meta function-name))))})
+
+(defn has-ns-doc
+  "Returns a map of namespace to true/false depending on docstring occurance."
+  [namespace-name]
+  (let [doc (:doc (meta (the-ns (symbol (str namespace-name)))))]
+    {(str namespace-name) (and (boolean doc)
+                               (not= "" doc))}))
 
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
@@ -140,14 +160,30 @@
     (let [source-files (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
                                (flatten (get-all project :source-paths)))
+          all-namespaces (->> source-files
+                              (map load-namespace)
+                              (remove nil?))
           all-publics (mapcat read-namespace source-files)
           no-docstrings (->> all-publics
                              (mapcat has-doc)
-                             (filter #(= (val %) false)))]
+                             (filter #(= (val %) false)))
+          no-ns-doc (->> all-namespaces
+                         (mapcat has-ns-doc)
+                         (filter #(= (val %) false)))]
+      (printf
+       "%d/%d [%.2f%%] namespaces have docstrings.\n"
+       (- (count all-namespaces) (count no-ns-doc))
+       (count all-namespaces)
+       (try
+         (double
+          (* 100 (/ (- (count all-namespaces)
+                       (count no-ns-doc))
+                    (count all-namespaces))))
+         (catch ArithmeticException _ Double/NaN)))
       (printf
        (str "%d/%d [%.2f%%] functions have docstrings.\n"
             (when (not verbose)
-              "Use -v to list functions without docstrings\n"))
+              "Use -v to list namespaces/functions without docstrings\n"))
        (- (count all-publics) (count no-docstrings))
        (count all-publics)
        (try
@@ -158,10 +194,15 @@
          (catch ArithmeticException _ Double/NaN)))
       (flush)
       (when verbose
+        (println "\nNamespaces without docstrings:")
+        (doseq [[ns-name _] (sort no-ns-doc)]
+          (println ns-name)))
+      (when verbose
         (println "\nMethods without docstrings:")
         (doseq [[method _] (sort no-docstrings)]
           (println method)))
-      (-> no-docstrings count pos?))
+      (or (-> no-docstrings count pos?)
+          (-> no-ns-doc count pos?)))
     (catch Throwable t
       (println "Sorry, I wasn't able to read your source files -" t))))
 
