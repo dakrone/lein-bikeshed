@@ -91,14 +91,34 @@
     {(str namespace-name) (and (boolean doc)
                                (not= "" doc))}))
 
+(defn find-all-files [dirs]
+  (->> (str "find " dirs " -name " filename-regex)
+       (clojure.java.shell/sh "bash" "-c")
+       (:out)
+       (#(clojure.string/split % #"\n"))))
+
+(defn find-git-checked-files []
+  (-> (clojure.java.shell/sh "git" "ls-files" "--full-name")
+      (:out)
+      (clojure.string/split #"\n")))
+
+(defn find-clojure-files [dirs only-git-checked?]
+  (let [all-files (find-all-files dirs)]
+    (if only-git-checked?
+      (let [git-files (set (find-git-checked-files))]
+        ; All files vector contains absolute file paths, git file vector
+        ; contains paths relative to the git root.
+        (->> (filter (fn [f] (some #(.endsWith f %) git-files)) all-files)
+             (clojure.string/join " ")))
+      (clojure.string/join " " all-files))))
+
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
   max-line-length defaults to 80."
-  [all-dirs & {:keys [max-line-length] :or {max-line-length 80}}]
+  [all-files & {:keys [max-line-length] :or {max-line-length 80}}]
   (printf "\nChecking for lines longer than %s characters.\n" max-line-length)
   (let [max-line-length (inc max-line-length)
-        cmd (str "find " all-dirs " -name "
-                 filename-regex
+        cmd (str "echo " all-files
                  " | xargs egrep -H -n '^.{" max-line-length ",}$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
@@ -110,10 +130,9 @@
 
 (defn trailing-whitespace
   "Complain about lines with trailing whitespace."
-  [all-dirs]
+  [all-files]
   (println "\nChecking for lines with trailing whitespace.")
-  (let [cmd (str "find " all-dirs " -name "
-                 filename-regex " | xargs grep -H -n '[ \t]$'")
+  (let [cmd (str "echo " all-files " | xargs grep -H -n '[ \t]$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
     (if your-code-is-formatted-wrong
@@ -124,10 +143,10 @@
 
 (defn trailing-blank-lines
   "Complain about files ending with blank lines."
-  [all-dirs]
+  [all-files]
   (println "\nChecking for files ending in blank lines.")
-  (let [cmd (str "find " all-dirs " -name " filename-regex " "
-                 "-exec tail -1 \\{\\} \\; -print "
+  (let [cmd (str "files=" all-files "; "
+                 "find $files -exec tail -1 \\{\\} \\; -print "
                  "| egrep -A 1 '^\\s*$' | egrep 'clj|sql'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
@@ -139,9 +158,9 @@
 
 (defn bad-roots
   "Complain about the use of with-redefs."
-  [source-dirs]
+  [source-files]
   (println "\nChecking for redefined var roots in source directories.")
-  (let [cmd (str "find " source-dirs " -name " filename-regex " | "
+  (let [cmd (str "echo " source-files " | "
                  "xargs egrep -H -n '(\\(with-redefs)'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         lines (line-seq (BufferedReader. (StringReader. out)))]
@@ -152,14 +171,23 @@
           true)
       (println "No with-redefs found."))))
 
+(defn find-clojure-sources-in-dirs
+  [dirs only-git-checked?]
+  (let [sources (mapcat #(-> % io/file ns-find/find-clojure-sources-in-dir)
+                        dirs)]
+    (if only-git-checked?
+      (let [git-files (set (find-git-checked-files))]
+        (filter (fn [f] (some #(.endsWith (.getPath f) %) git-files)) sources))
+      sources)))
+
 (defn missing-doc-strings
   "Report the percentage of missing doc strings."
-  [project verbose]
+  [project verbose only-git-checked?]
   (println "\nChecking whether you keep up with your docstrings.")
   (try
-    (let [source-files (mapcat #(-> % io/file
-                                    ns-find/find-clojure-sources-in-dir)
-                               (flatten (get-all project :source-paths)))
+    (let [source-files (find-clojure-sources-in-dirs
+                         (flatten (get-all project :source-paths))
+                         only-git-checked?)
           all-namespaces (->> source-files
                               (map load-namespace)
                               (remove nil?))
@@ -219,12 +247,12 @@
 (defn- check-all-arguments
   "Check if the arguments for functions collide
   with function from clojure/core"
-  [project]
+  [project only-git-checked?]
   (println "\nChecking for arguments colliding with clojure.core functions.")
   (let [core-functions (-> 'clojure.core ns-publics keys)
-        source-files   (mapcat #(-> % io/file
-                                    ns-find/find-clojure-sources-in-dir)
-                               (flatten (get-all project :source-paths)))
+        source-files   (find-clojure-sources-in-dirs
+                         (flatten (get-all project :source-paths))
+                         only-git-checked?)
         all-publics    (mapcat read-namespace source-files)]
     (->> all-publics
          (map (fn [function]
@@ -245,20 +273,28 @@
   code has been bikeshedded and found wanting."
   [project & opts]
   (let [options (first opts)
-        source-dirs (clojure.string/join " " (flatten
+        source-files (find-clojure-files
+                       (clojure.string/join " "
+                                            (flatten
                                               (get-all project :source-paths)))
-        test-dirs (clojure.string/join " " (:test-paths project))
-        all-dirs (str source-dirs " " test-dirs)
+                       (:only-git-checked? options))
+        test-files (find-clojure-files
+                     (clojure.string/join " " (:test-paths project))
+                     (:only-git-checked? options))
+        all-files (str source-files " " test-files)
         long-lines (if (nil? (:max-line-length options))
-                     (long-lines all-dirs)
-                     (long-lines all-dirs
+                     (long-lines all-files)
+                     (long-lines all-files
                                  :max-line-length
                                  (:max-line-length options)))
-        trailing-whitespace (trailing-whitespace all-dirs)
-        trailing-blank-lines (trailing-blank-lines all-dirs)
-        bad-roots (bad-roots source-dirs)
-        bad-methods (missing-doc-strings project (:verbose options))
-        bad-arguments (check-all-arguments project)]
+        trailing-whitespace (trailing-whitespace all-files)
+        trailing-blank-lines (trailing-blank-lines all-files)
+        bad-roots (bad-roots source-files)
+        bad-methods (missing-doc-strings project
+                                         (:verbose options)
+                                         (:only-git-checked? options))
+        bad-arguments (check-all-arguments project
+                                           (:only-git-checked? options))]
     (or bad-arguments
         long-lines
         trailing-whitespace
