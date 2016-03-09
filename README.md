@@ -45,11 +45,12 @@ Checking for arguments colliding with clojure.core functions.
 
 ## Options
 
-| Switches                    | Default | Desc                        |
-| --------------------------- | ------- | --------------------------- |
-| -H, --no-help-me, --help-me | false   | Show help                   |
-| -v, --no-verbose, --verbose | false   | Display missing doc strings |
-| -m, --max-line-length       |         | Max line length             |
+| Switches                    | Default | Desc                               |
+| --------------------------- | ------- | ---------------------------------- |
+| -H, --no-help-me, --help-me | false   | Show help                          |
+| -v, --no-verbose, --verbose | false   | Display missing doc strings        |
+| -m, --max-line-length       |         | Max line length                    |
+| -c, --only-git-checked      | false   | Lint files that are checked in git |
 
 ## License
 

@@ -21,14 +21,17 @@
             :flag true :default false]
            ["-m" "--max-line-length" "Max line length"
             :default nil
-            :parse-fn #(Integer/parseInt %)])]
+            :parse-fn #(Integer/parseInt %)]
+           ["-c" "--only-git-checked" "Only lint files that are checked in git"
+            :flag true :default false])]
       '~project
       (when (:help-me opts#)
         (println banner#)
         (System/exit 0))
       (if (bikeshed.core/bikeshed
            '~project {:max-line-length (:max-line-length opts#)
-                      :verbose (:verbose opts#)})
+                      :verbose (:verbose opts#)
+                      :only-git-checked? (:only-git-checked opts#)})
         (System/exit -1)
         (System/exit 0)))
    '(do
