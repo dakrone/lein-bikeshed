@@ -50,7 +50,7 @@
 (def filename-regex
   "Gnu `find' regex for files that should be checked"
   ;; double escape characters: one for clojure, one for gnu find
-  "'.*\\.clj[scx]{0,1}'")
+  "'.*\\.clj[scx]?'")
 
 (defn load-namespace
   "Reads a file, returning the namespace name"
