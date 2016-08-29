@@ -21,13 +21,15 @@
             :flag true :default false]
            ["-m" "--max-line-length" "Max line length"
             :default nil
-            :parse-fn #(Integer/parseInt %)])]
+            :parse-fn #(Integer/parseInt %)])
+          lein-opts# (:bikeshed '~project)]
       '~project
       (when (:help-me opts#)
         (println banner#)
         (System/exit 0))
       (if (bikeshed.core/bikeshed
-           '~project {:max-line-length (:max-line-length opts#)
+           '~project {:max-line-length (or (:max-line-length opts#)
+                                           (:max-line-length lein-opts#))
                       :verbose (:verbose opts#)})
         (System/exit -1)
         (System/exit 0)))
