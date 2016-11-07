@@ -1,6 +1,8 @@
 (ns leiningen.bikeshed
-  (:require [clojure.tools.cli :as cli]
-            [leiningen.core.eval :as lein]))
+  (:require [clojure.string :as str]
+            [clojure.tools.cli :as cli]
+            [leiningen.core.eval :as lein]
+            [leiningen.core.project :as project]))
 
 (defn help
   "Help text displayed from the command line"
@@ -19,7 +21,15 @@
           :flag true :default false]
          ["-m" "--max-line-length" "Max line length"
           :default nil
-          :parse-fn #(Integer/parseInt %)])]
+          :parse-fn #(Integer/parseInt %)]
+         ["-x" "--exclude-profiles" "Comma-separated profile exclusions"
+          :default nil
+          :parse-fn #(mapv keyword (str/split % #","))])
+        project (if-let [exclusions (seq (:exclude-profiles opts))]
+                  (-> project
+                      (project/unmerge-profiles exclusions)
+                      (update-in [:profiles] #(apply dissoc % exclusions)))
+                  project)]
     (if (:help-me opts)
       (println banner)
       (lein/eval-in-project
