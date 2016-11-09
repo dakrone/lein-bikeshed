@@ -50,6 +50,17 @@ Checking for arguments colliding with clojure.core functions.
 | -H, --no-help-me, --help-me | false   | Show help                   |
 | -v, --no-verbose, --verbose | false   | Display missing doc strings |
 | -m, --max-line-length       |         | Max line length             |
+| -x, --exclude-profiles |        | Comma-separated profile exclusion |
+
+You can also add the `:bikeshed` option map directly to your `project.clj`:
+
+```clj
+(defproject my-thing "1.0.0"
+  :description "A thing"
+  ;; Override the default max-line-length
+  :bikeshed {:max-line-length 60}
+  :dependencies [[clj-http "3.3.0"]])
+```
 
 ## License
 
