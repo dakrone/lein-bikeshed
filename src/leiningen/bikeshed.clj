@@ -25,6 +25,7 @@
          ["-x" "--exclude-profiles" "Comma-separated profile exclusions"
           :default nil
           :parse-fn #(mapv keyword (str/split % #","))])
+        lein-opts (:bikeshed project)
         project (if-let [exclusions (seq (:exclude-profiles opts))]
                   (-> project
                       (project/unmerge-profiles exclusions)
@@ -39,6 +40,9 @@
                       ['lein-bikeshed "0.3.1-SNAPSHOT"]))
        `(if (bikeshed.core/bikeshed
              '~project
+             {:max-line-length (or (:max-line-length ~opts)
+                                   (:max-line-length ~lein-opts))
+              :verbose (:verbose ~opts)}
              (select-keys ~opts [:max-line-length :verbose]))
           (System/exit -1)
           (System/exit 0))
