@@ -1,5 +1,8 @@
 (ns leiningen.bikeshed
-  (:require [leiningen.core.eval :as lein]))
+  (:require [clojure.string :as str]
+            [clojure.tools.cli :as cli]
+            [leiningen.core.eval :as lein]
+            [leiningen.core.project :as project]))
 
 (defn help
   "Help text displayed from the command line"
@@ -9,28 +12,34 @@
 (defn bikeshed
   "Main function called from Leiningen"
   [project & args]
-  (lein/eval-in-project
-   (-> project
-       (update-in [:dependencies] conj ['lein-bikeshed "0.3.1-SNAPSHOT"]))
-   `(let [[opts# args# banner#]
-          (clojure.tools.cli/cli
-           '~args
-           ["-H" "--help-me" "Show help"
-            :flag true :default false]
-           ["-v" "--verbose" "Display missing doc strings"
-            :flag true :default false]
-           ["-m" "--max-line-length" "Max line length"
-            :default nil
-            :parse-fn #(Integer/parseInt %)])]
-      '~project
-      (when (:help-me opts#)
-        (println banner#)
-        (System/exit 0))
-      (if (bikeshed.core/bikeshed
-           '~project {:max-line-length (:max-line-length opts#)
-                      :verbose (:verbose opts#)})
-        (System/exit -1)
-        (System/exit 0)))
-   '(do
-      (require 'bikeshed.core)
-      (require 'clojure.tools.cli))))
+  (let [[opts args banner]
+        (cli/cli
+         args
+         ["-H" "--help-me" "Show help"
+          :flag true :default false]
+         ["-v" "--verbose" "Display missing doc strings"
+          :flag true :default false]
+         ["-m" "--max-line-length" "Max line length"
+          :default nil
+          :parse-fn #(Integer/parseInt %)]
+         ["-x" "--exclude-profiles" "Comma-separated profile exclusions"
+          :default nil
+          :parse-fn #(mapv keyword (str/split % #","))])
+        project (if-let [exclusions (seq (:exclude-profiles opts))]
+                  (-> project
+                      (project/unmerge-profiles exclusions)
+                      (update-in [:profiles] #(apply dissoc % exclusions)))
+                  project)]
+    (if (:help-me opts)
+      (println banner)
+      (lein/eval-in-project
+       (-> project
+           (update-in [:dependencies]
+                      conj
+                      ['lein-bikeshed "0.3.1-SNAPSHOT"]))
+       `(if (bikeshed.core/bikeshed
+             '~project
+             (select-keys ~opts [:max-line-length :verbose]))
+          (System/exit -1)
+          (System/exit 0))
+       '(require 'bikeshed.core)))))
