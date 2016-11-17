@@ -50,7 +50,7 @@
 (def filename-regex
   "Gnu `find' regex for files that should be checked"
   ;; double escape characters: one for clojure, one for gnu find
-  "'.*\\.clj[scx]?'")
+  "'.*\\.clj[scx]*'")
 
 (defn load-namespace
   "Reads a file, returning the namespace name"
@@ -98,7 +98,7 @@
   [all-dirs & {:keys [max-line-length] :or {max-line-length 80}}]
   (printf "\nChecking for lines longer than %s characters.\n" max-line-length)
   (let [max-line-length (inc max-line-length)
-        cmd (str "find " all-dirs " -regextype posix-extended -regex "
+        cmd (str "find " all-dirs " -regex "
                  filename-regex
                  " | xargs egrep -H -n '^.{" max-line-length ",}$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
@@ -113,7 +113,7 @@
   "Complain about lines with trailing whitespace."
   [all-dirs]
   (println "\nChecking for lines with trailing whitespace.")
-  (let [cmd (str "find " all-dirs " -regextype posix-extended -regex "
+  (let [cmd (str "find " all-dirs " -regex "
                  filename-regex " | xargs grep -H -n '[ \t]$'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         your-code-is-formatted-wrong (not (blank? out))]
@@ -127,7 +127,7 @@
   "Complain about files ending with blank lines."
   [all-dirs]
   (println "\nChecking for files ending in blank lines.")
-  (let [cmd (str "find " all-dirs " -regextype posix-extended -regex " filename-regex " "
+  (let [cmd (str "find " all-dirs " -regex " filename-regex " "
                  "-exec tail -1 \\{\\} \\; -print "
                  "| egrep -A 1 '^\\s*$' | egrep 'clj|sql'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
@@ -142,7 +142,7 @@
   "Complain about the use of with-redefs."
   [source-dirs]
   (println "\nChecking for redefined var roots in source directories.")
-  (let [cmd (str "find " source-dirs " -regextype posix-extended -regex " filename-regex " | "
+  (let [cmd (str "find " source-dirs " -regex " filename-regex " | "
                  "xargs egrep -H -n '(\\(with-redefs)'")
         out (:out (clojure.java.shell/sh "bash" "-c" cmd))
         lines (line-seq (BufferedReader. (StringReader. out)))]
