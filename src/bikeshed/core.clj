@@ -1,11 +1,10 @@
 (ns bikeshed.core
   "Define all the functionalities of bikeshed"
-  (:require [clojure.string :refer [blank?]]
+  (:require [clojure.string :refer [blank? starts-with? trim join]]
             [clojure.java.io :as io]
-            [clojure.java.shell]
             [clojure.tools.namespace.file :as ns-file]
             [clojure.tools.namespace.find :as ns-find])
-  (:import (java.io BufferedReader StringReader)))
+  (:import (java.io BufferedReader StringReader File)))
 
 (defn foo
   "I don't do a whole lot."
@@ -32,25 +31,47 @@
   ([map])
   ([map first]))
 
+(defn file-with-extension?
+  "Returns true if the java.io.File represents a file whose name ends
+  with one of the Strings in extensions."
+  [^java.io.File file extensions]
+  (and (.isFile file)
+       (let [name (.getName file)]
+         (some #(.endsWith name %) extensions))))
+
+(defn- sort-files-breadth-first
+  [files]
+  (sort-by #(.getAbsolutePath ^File %) files))
+
+(defn find-sources-in-dir
+  "Searches recursively under dir for source files. Returns a sequence
+  of File objects, in breadth-first sort order.
+  Optional second argument is either clj (default) or cljs, both
+  defined in clojure.tools.namespace.find."
+  ([dir]
+   (find-sources-in-dir dir nil))
+  ([^File dir extensions]
+   (let [extensions (or extensions [".clj" ".cljc"])]
+     (->> (file-seq dir)
+          (filter #(file-with-extension? % extensions))
+          sort-files-breadth-first))))
+
 (defn- get-all
   "Returns all the values found for the LOOKED-UP-KEY passed as an argument
   recursively walking the MAP-TO-TRAVERSE provided as argument"
-  [map-to-traverse looked-up-key]
-  (let [result (atom [])]
-    (doseq [[k v] map-to-traverse]
-      (when (= looked-up-key k)
-        (swap! result conj v))
-      (when (map? v)
-        (let [sub-map (get-all v looked-up-key)]
-          (when-not (empty? sub-map)
-            (reset! result
-                    (apply conj @result sub-map))))))
-    @result))
-
-(def filename-regex
-  "Gnu `find' regex for files that should be checked"
-  ;; double escape characters: one for clojure, one for gnu find
-  "'.*\\.clj[scx]*'")
+  ([map-to-traverse looked-up-key]
+   (let [result (atom [])]
+     (doseq [[k v] map-to-traverse]
+       (when (= looked-up-key k)
+         (swap! result conj v))
+       (when (map? v)
+         (let [sub-map (get-all v looked-up-key)]
+           (when-not (empty? sub-map)
+             (reset! result
+                     (apply conj @result sub-map))))))
+     @result))
+  ([map-to-traverse k & ks]
+   (mapcat (partial get-all map-to-traverse) (cons k ks))))
 
 (defn load-namespace
   "Reads a file, returning the namespace name"
@@ -95,63 +116,76 @@
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
   max-line-length defaults to 80."
-  [all-dirs & {:keys [max-line-length] :or {max-line-length 80}}]
+  [source-files & {:keys [max-line-length] :or {max-line-length 80}}]
   (printf "\nChecking for lines longer than %s characters.\n" max-line-length)
-  (let [max-line-length (inc max-line-length)
-        cmd (str "find " all-dirs " -regex "
-                 filename-regex
-                 " | xargs egrep -H -n '^.{" max-line-length ",}$'")
-        out (:out (clojure.java.shell/sh "bash" "-c" cmd))
-        your-code-is-formatted-wrong (not (blank? out))]
-    (if your-code-is-formatted-wrong
-      (do (println "Badly formatted files:")
-          (println (.trim out))
-          true)
-      (println "No lines found."))))
+  (let [indexed-lines (fn [f]
+                        (with-open [r (io/reader f)]
+                          (doall
+                           (keep-indexed
+                            (fn [idx line]
+                              (when (> (count line) max-line-length)
+                                (trim (join ":" [(.getAbsolutePath f) (inc idx) line]))))
+                            (line-seq r)))))
+        all-long-lines (flatten (map indexed-lines source-files))]
+    (if (empty? all-long-lines)
+      (println "No lines found.")
+      (do
+        (println "Badly formatted files:")
+        (println (join "\n" all-long-lines))
+        true))))
 
 (defn trailing-whitespace
   "Complain about lines with trailing whitespace."
-  [all-dirs]
+  [source-files]
   (println "\nChecking for lines with trailing whitespace.")
-  (let [cmd (str "find " all-dirs " -regex "
-                 filename-regex " | xargs grep -H -n '[ \t]$'")
-        out (:out (clojure.java.shell/sh "bash" "-c" cmd))
-        your-code-is-formatted-wrong (not (blank? out))]
-    (if your-code-is-formatted-wrong
+  (let [indexed-lines (fn [f]
+                        (with-open [r (io/reader f)]
+                          (doall
+                           (keep-indexed
+                            (fn [idx line]
+                              (when (re-seq #"\s+$" line)
+                                (trim (join ":" [(.getAbsolutePath f) (inc idx) line]))))
+                            (line-seq r)))))
+        trailing-whitespace-lines (flatten (map indexed-lines source-files))]
+    (if (empty? trailing-whitespace-lines)
+      (println "No lines found.")
       (do (println "Badly formatted files:")
-          (println (.trim out))
-          true)
-      (println "No lines found."))))
+          (println (join "\n" trailing-whitespace-lines))
+          true))))
 
 (defn trailing-blank-lines
   "Complain about files ending with blank lines."
-  [all-dirs]
+  [source-files]
   (println "\nChecking for files ending in blank lines.")
-  (let [cmd (str "find " all-dirs " -regex " filename-regex " "
-                 "-exec tail -1 \\{\\} \\; -print "
-                 "| egrep -A 1 '^\\s*$' | egrep 'clj|sql'")
-        out (:out (clojure.java.shell/sh "bash" "-c" cmd))
-        your-code-is-formatted-wrong (not (blank? out))]
-    (if your-code-is-formatted-wrong
+  (let [get-last-line (fn [f]
+                        (with-open [r (io/reader f)]
+                          (when (re-matches #"^\s*$" (last (line-seq r)))
+                            (.getAbsolutePath f))))
+        bad-files (filter some? (map get-last-line source-files))]
+    (if (empty? bad-files)
+      (println "No files found.")
       (do (println "Badly formatted files:")
-          (println (.trim out))
-          true)
-      (println "No files found."))))
+          (println (join "\n" bad-files))
+          true))))
 
 (defn bad-roots
   "Complain about the use of with-redefs."
-  [source-dirs]
+  [source-files]
   (println "\nChecking for redefined var roots in source directories.")
-  (let [cmd (str "find " source-dirs " -regex " filename-regex " | "
-                 "xargs egrep -H -n '(\\(with-redefs)'")
-        out (:out (clojure.java.shell/sh "bash" "-c" cmd))
-        lines (line-seq (BufferedReader. (StringReader. out)))]
-    (if (and lines (not= 0 (count lines)))
+  (let [indexed-lines (fn [f]
+                        (with-open [r (io/reader f)]
+                          (doall
+                           (keep-indexed
+                            (fn [idx line]
+                              (when (re-seq #"\(with-redefs" line)
+                                (trim (join ":" [(.getAbsolutePath f) (inc idx) line]))))
+                            (line-seq r)))))
+        bad-lines (flatten (map indexed-lines source-files))]
+    (if (empty? bad-lines)
+      (println "No with-redefs found.")
       (do (println "with-redefs found in source directory:")
-          (doseq [line lines]
-            (println line))
-          true)
-      (println "No with-redefs found."))))
+          (println (join "\n" bad-lines))
+          true))))
 
 (defn missing-doc-strings
   "Report the percentage of missing doc strings."
@@ -245,19 +279,21 @@
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
   code has been bikeshedded and found wanting."
   [project & opts]
-  (let [options (first opts)
-        source-dirs (clojure.string/join " " (flatten
-                                              (get-all project :source-paths)))
-        test-dirs (clojure.string/join " " (:test-paths project))
-        all-dirs (str source-dirs " " test-dirs)
+  (let [source-files (remove
+                      #(starts-with? (.getName %) ".")
+                      (mapcat
+                       #(-> % io/file
+                            (find-sources-in-dir [".clj" ".cljs" ".cljc" ".cljx"]))
+                       (flatten (get-all project :source-paths :test-paths))))
+        options (first opts)
         long-lines (if (nil? (:max-line-length options))
-                     (long-lines all-dirs)
-                     (long-lines all-dirs
+                     (long-lines source-files)
+                     (long-lines source-files
                                  :max-line-length
                                  (:max-line-length options)))
-        trailing-whitespace (trailing-whitespace all-dirs)
-        trailing-blank-lines (trailing-blank-lines all-dirs)
-        bad-roots (bad-roots source-dirs)
+        trailing-whitespace (trailing-whitespace source-files)
+        trailing-blank-lines (trailing-blank-lines source-files)
+        bad-roots (bad-roots source-files)
         bad-methods (missing-doc-strings project (:verbose options))
         bad-arguments (check-all-arguments project)]
     (or bad-arguments
