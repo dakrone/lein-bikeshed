@@ -254,7 +254,7 @@
                      (long-lines all-dirs)
                      (long-lines all-dirs
                                  :max-line-length
-                                 (:max-line-length options)))
+                                 (Integer/parseInt (str (:max-line-length options)))))
         trailing-whitespace (trailing-whitespace all-dirs)
         trailing-blank-lines (trailing-blank-lines all-dirs)
         bad-roots (bad-roots source-dirs)
