@@ -226,7 +226,7 @@
           (* 100 (/ (- (count all-publics)
                        (count no-docstrings))
                     (count all-publics))))
-         (catch ArithmeticException _ Double/NaN)))
+         (catch ArithmeticException _ 0)))
       (flush)
       (when verbose
         (println "\nNamespaces without docstrings:")
