@@ -3,7 +3,8 @@
   (:require [clojure.string :refer [blank? starts-with? trim join]]
             [clojure.java.io :as io]
             [clojure.tools.namespace.file :as ns-file]
-            [clojure.tools.namespace.find :as ns-find])
+            [clojure.tools.namespace.find :as ns-find]
+            [clojure.string :as str])
   (:import (java.io BufferedReader StringReader File)))
 
 (defn foo
@@ -278,26 +279,36 @@
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
   code has been bikeshedded and found wanting."
-  [project & opts]
+  [project {:keys [check? verbose max-line-length]}]
   (let [source-files (remove
                       #(starts-with? (.getName %) ".")
                       (mapcat
                        #(-> % io/file
                             (find-sources-in-dir [".clj" ".cljs" ".cljc" ".cljx"]))
                        (flatten (get-all project :source-paths :test-paths))))
-        options (first opts)
-        long-lines (if (nil? (:max-line-length options))
-                     (long-lines source-files)
-                     (long-lines source-files
-                                 :max-line-length
-                                 (:max-line-length options)))
-        trailing-whitespace (trailing-whitespace source-files)
-        trailing-blank-lines (trailing-blank-lines source-files)
-        bad-roots (bad-roots source-files)
-        bad-methods (missing-doc-strings project (:verbose options))
-        bad-arguments (check-all-arguments project)]
-    (or bad-arguments
-        long-lines
-        trailing-whitespace
-        trailing-blank-lines
-        bad-roots)))
+        results {:long-lines           (when (check? :long-lines)
+                                         (if max-line-length
+                                           (long-lines source-files
+                                                       :max-line-length max-line-length)
+                                           (long-lines source-files)))
+                 :trailing-whitespace  (when (check? :trailing-whitespace)
+                                         (trailing-whitespace source-files))
+                 :trailing-blank-lines (when (check? :trailing-blank-lines)
+                                         (trailing-blank-lines source-files))
+                 :var-redefs           (when (check? :var-redefs)
+                                         (bad-roots source-files))
+                 :bad-methods          (when (check? :docstrings)
+                                         (missing-doc-strings project verbose))
+                 :name-collisions      (when (check? :name-collisions)
+                                         (check-all-arguments project))}
+        failures (->> results
+                      (filter second)
+                      (map first)
+                      (remove #{:bad-methods})
+                      (map name))]
+    (if (empty? failures)
+      (println "\nSuccess")
+      (do (println "\nThe following checks failed:\n *"
+                   (str/join "\n * " failures)
+                   "\n")
+          failures))))

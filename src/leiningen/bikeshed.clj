@@ -20,8 +20,25 @@
          ["-v" "--verbose" "Display missing doc strings"
           :flag true :default false]
          ["-m" "--max-line-length" "Max line length"
-          :default nil
           :parse-fn #(Integer/parseInt %)]
+         ["-l" "--long-lines"
+          "If true, check for trailing blank lines"
+          :parse-fn #(Boolean/valueOf %)]
+         ["-w" "--trailing-whitespace"
+          "If true, check for trailing whitespace"
+          :parse-fn #(Boolean/valueOf %)]
+         ["-b" "--trailing-blank-lines"
+          "If true, check for trailing blank lines"
+          :parse-fn #(Boolean/valueOf %)]
+         ["-r" "--var-redefs"
+          "If true, check for redefined var roots in source directories"
+          :parse-fn #(Boolean/valueOf %)]
+         ["-d" "--docstrings"
+          "If true, generate a report of docstring coverage"
+          :parse-fn #(Boolean/valueOf %)]
+         ["-n" "--name-collisions"
+          "If true, check for function arg names that collide with clojure.core"
+          :parse-fn #(Boolean/valueOf %)]
          ["-x" "--exclude-profiles" "Comma-separated profile exclusions"
           :default nil
           :parse-fn #(mapv keyword (str/split % #","))])
@@ -42,8 +59,8 @@
              '~project
              {:max-line-length (or (:max-line-length ~opts)
                                    (:max-line-length ~lein-opts))
-              :verbose (:verbose ~opts)}
-             (select-keys ~opts [:max-line-length :verbose]))
+              :verbose         (:verbose ~opts)
+              :check?          #(get (merge ~lein-opts ~opts) % true)})
           (System/exit -1)
           (System/exit 0))
        '(require 'bikeshed.core)))))
