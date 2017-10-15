@@ -8,7 +8,7 @@ should feel bad.
 Add to your ~/.lein/profiles.clj:
 
 ```clojure
-{:user {:plugins [[lein-bikeshed "0.4.1"]]}}
+{:user {:plugins [[lein-bikeshed "0.5.0"]]}}
 ```
 
 Just run `lein bikeshed` on your project:
@@ -41,6 +41,14 @@ Use -v to list functions without docstrings")")))
 
 Checking for arguments colliding with clojure.core functions.
 #'bikeshed.core/colliding-arguments: 'map', 'first' are colliding with core functions
+
+The following checks failed:
+ * long-lines
+ * trailing-whitespace
+ * trailing-blank-lines
+ * var-redefs
+ * name-collisions
+
 ```
 
 ## Options
