@@ -54,7 +54,7 @@
        (-> project
            (update-in [:dependencies]
                       conj
-                      ['lein-bikeshed "0.5.1-SNAPSHOT"]))
+                      ['lein-bikeshed "0.5.1"]))
        `(if (bikeshed.core/bikeshed
              '~project
              {:max-line-length (or (:max-line-length ~opts)
