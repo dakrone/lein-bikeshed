@@ -276,25 +276,30 @@
          (apply +)
          (pos?))))
 
+(defn visible-project-files
+  [project & paths-keys]
+  (remove
+   #(starts-with? (.getName %) ".")
+   (mapcat
+    #(-> % io/file
+         (find-sources-in-dir [".clj" ".cljs" ".cljc" ".cljx"]))
+    (flatten (apply get-all project paths-keys)))))
+
 (defn bikeshed
   "Bikesheds your project with totally arbitrary criteria. Returns true if the
   code has been bikeshedded and found wanting."
   [project {:keys [check? verbose max-line-length]}]
-  (let [source-files (remove
-                      #(starts-with? (.getName %) ".")
-                      (mapcat
-                       #(-> % io/file
-                            (find-sources-in-dir [".clj" ".cljs" ".cljc" ".cljx"]))
-                       (flatten (get-all project :source-paths :test-paths))))
+  (let [all-files (visible-project-files project :source-paths :test-paths)
+        source-files (visible-project-files project :source-paths)
         results {:long-lines           (when (check? :long-lines)
                                          (if max-line-length
-                                           (long-lines source-files
+                                           (long-lines all-files
                                                        :max-line-length max-line-length)
-                                           (long-lines source-files)))
+                                           (long-lines all-files)))
                  :trailing-whitespace  (when (check? :trailing-whitespace)
-                                         (trailing-whitespace source-files))
+                                         (trailing-whitespace all-files))
                  :trailing-blank-lines (when (check? :trailing-blank-lines)
-                                         (trailing-blank-lines source-files))
+                                         (trailing-blank-lines all-files))
                  :var-redefs           (when (check? :var-redefs)
                                          (bad-roots source-files))
                  :bad-methods          (when (check? :docstrings)
