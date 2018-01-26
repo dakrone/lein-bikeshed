@@ -277,6 +277,8 @@
          (pos?))))
 
 (defn visible-project-files
+  "Given a project and list of keys (such as `:source-paths` or `:test-paths`,
+  return all source files underneath those directories."
   [project & paths-keys]
   (remove
    #(starts-with? (.getName %) ".")
