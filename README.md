@@ -85,7 +85,7 @@ In order to allow third party library consumers to decide on issue reporting app
 Results can look as follows:
 
 ```clj
-{:failures ("name-collisions"), :details [{:description "Arguments colliding with core functions", :type :name-collisions, :details [{:file #'bikeshed.core/colliding-arguments, :content "map', 'first'"}]}]}
+{:failures ("name-collisions"), :details [{:description "Arguments colliding with core functions", :type :name-collisions, :issues [{:file #'bikeshed.core/colliding-arguments, :content "map', 'first'"}]}]}
 ```
 As You can see the record contains two root entries:
 - failures - which is a brief summary on what linting methods have failed.

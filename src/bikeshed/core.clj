@@ -136,7 +136,7 @@
       (do
         (println "Badly formatted files:")
         (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) all-long-lines)))
-        (add-issue details {:description (str "Line length exceeds " max-line-length) :type :long-lines :details all-long-lines})
+        (add-issue details {:description (str "Line length exceeds " max-line-length) :type :long-lines :issues all-long-lines})
         true))))
 
 (defn trailing-whitespace
@@ -156,7 +156,7 @@
       (println "No lines found.")
       (do (println "Badly formatted files:")
           (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) trailing-whitespace-lines)))
-          (add-issue details {:description "Remove trailing whitespace lines" :type :trailing-whitespace :details trailing-whitespace-lines})
+          (add-issue details {:description "Remove trailing whitespace lines" :type :trailing-whitespace :issues trailing-whitespace-lines})
           true))))
 
 (defn trailing-blank-lines
@@ -172,7 +172,7 @@
       (println "No files found.")
       (do (println "Badly formatted files:")
           (println (join "\n" (mapv #(trim (:file %)) bad-files)))
-          (add-issue details {:description "Remove blank line at the end of file." :type :trailing-blank-lines :details bad-files})
+          (add-issue details {:description "Remove blank line at the end of file." :type :trailing-blank-lines :issues bad-files})
           true))))
 
 (defn bad-roots
@@ -192,7 +192,7 @@
       (println "No with-redefs found.")
       (do (println "with-redefs found in source directory:")
           (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) bad-lines)))
-          (add-issue details {:description "Found with-redefs invokations" :type :var-redefs :details bad-lines})
+          (add-issue details {:description "Found with-redefs invokations" :type :var-redefs :issues bad-lines})
           true))))
 
 (defn missing-doc-strings
@@ -200,7 +200,8 @@
   [details project verbose]
   (println "\nChecking whether you keep up with your docstrings.")
   (try
-    (let [source-files (mapcat #(-> % io/file
+    (let [issues (atom [])
+          source-files (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
                                (flatten (get-all project :source-paths)))
           all-namespaces (->> source-files
@@ -239,11 +240,14 @@
       (when verbose
         (println "\nNamespaces without docstrings:")
         (doseq [[ns-name _] (sort no-ns-doc)]
-          (println ns-name)))
+          (println ns-name)
+          (swap! issues conj {:file " " :content (str "Namespace without docstrings: " ns-name)})))
       (when verbose
         (println "\nMethods without docstrings:")
         (doseq [[method _] (sort no-docstrings)]
-          (println method)))
+          (println method)
+          (swap! issues conj {:file " " :content (str "Method without docstrings: " method)})))
+      (add-issue details {:description "No docstrings" :type :docstrings :issues @issues})
       (or (-> no-docstrings count pos?)
           (-> no-ns-doc count pos?)))
     (catch Throwable t
@@ -318,11 +322,11 @@
                  :bad-methods          (when (check? :docstrings)
                                          (missing-doc-strings details project verbose))
                  :name-collisions      (when (check? :name-collisions)
-                                         (let [collisions (atom [])  
+                                         (let [collisions (atom [])
                                                result (check-all-arguments collisions project)]
                                            (add-issue details {:description "Arguments colliding with core functions"
                                                                :type :name-collisions
-                                                               :details @collisions})
+                                                               :issues @collisions})
                                            result))}
         failures (->> results
                       (filter second)
@@ -331,7 +335,7 @@
                       (map name))]
     (if (empty? failures)
       (println "\nSuccess")
-      (do (println "\nThe following checks failed:\n *"
-                   (str/join "\n * " failures)
-                   "\n")
-          {:failures failures :details @details}))))
+      (println "\nThe following checks failed:\n *"
+               (str/join "\n * " failures)
+               "\n"))
+    {:failures failures :details @details}))
