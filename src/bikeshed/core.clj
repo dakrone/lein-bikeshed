@@ -262,7 +262,7 @@
 (defn- check-all-arguments
   "Check if the arguments for functions collide
   with function from clojure/core"
-  [details project]
+  [collisions project]
   (println "\nChecking for arguments colliding with clojure.core functions.")
   (let [core-functions (-> 'clojure.core ns-publics keys)
         source-files   (mapcat #(-> % io/file
@@ -273,12 +273,15 @@
          (map (fn [function]
                 (let [args (wrong-arguments function core-functions)]
                   (when (seq args)
-                    (if (= 1 (count args))
-                      (println (str function ": '" (first args) "'")
-                               "is colliding with a core function")
-                      (println (str function ": '"
-                                    (clojure.string/join "', '" args) "'")
-                               "are colliding with core functions")))
+                    (do
+                      (if (= 1 (count args))
+                        (println (str function ": '" (first args) "'")
+                                 "is colliding with a core function")
+                        (println (str function ": '"
+                                      (clojure.string/join "', '" args) "'")
+                                 "are colliding with core functions"))
+                      (swap! collisions conj {:file function
+                                              :content (str (clojure.string/join "', '" args) "'")})))
                   (count args))))
          (apply +)
          (pos?))))
@@ -315,7 +318,12 @@
                  :bad-methods          (when (check? :docstrings)
                                          (missing-doc-strings details project verbose))
                  :name-collisions      (when (check? :name-collisions)
-                                         (check-all-arguments details project))}
+                                         (let [collisions (atom [])  
+                                               result (check-all-arguments collisions project)]
+                                           (add-issue details {:description "Arguments colliding with core functions"
+                                                               :type :name-collisions
+                                                               :details @collisions})
+                                           result))}
         failures (->> results
                       (filter second)
                       (map first)

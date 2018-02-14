@@ -78,6 +78,19 @@ You can also add the `:bikeshed` option map directly to your `project.clj`:
   :dependencies [[clj-http "3.3.0"]])
 ```
 
+## Using Bikeshed Processing Results
+
+In order to allow third party library consumers to decide on issue reporting approach, bikeshed returns a record containing processing details:
+
+Results can look as follows:
+
+```clj
+{:failures ("name-collisions"), :details [{:description "Arguments colliding with core functions", :type :name-collisions, :details [{:file #'bikeshed.core/colliding-arguments, :content "map', 'first'"}]}]}
+```
+As You can see the record contains two root entries:
+- failures - which is a brief summary on what linting methods have failed.
+- details - which contain processing details. This entry can contain a lot of data depending on linting method being invoked. General convention is that it contains a vector of reported issues and each issue in that vector is composed of: file, content (which may vary depending on function), line (optional).
+
 ## License
 
 Copyright © 2012 Matthew Lee Hinman & Sonian
