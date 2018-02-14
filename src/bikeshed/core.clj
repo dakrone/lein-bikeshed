@@ -117,11 +117,6 @@
     {(str namespace-name) (and (boolean doc)
                                (not= "" doc))}))
 
-(defn- linting-error-details-for-files [details files error-message]
-  (doseq [long-line-file all-long-lines]
-    (add-issue details {:file long-line-file
-                        :description (str  "Line length exceeds " max-line-length)})))
-
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
   max-line-length defaults to 80."
@@ -133,15 +128,15 @@
                            (keep-indexed
                             (fn [idx line]
                               (when (> (count line) max-line-length)
-                                (trim (join ":" [(.getAbsolutePath f) (inc idx) line]))))
+                                {:file (.getAbsolutePath f) :line (inc idx) :content line}))
                             (line-seq r)))))
         all-long-lines (flatten (map indexed-lines source-files))]
     (if (empty? all-long-lines)
       (println "No lines found.")
       (do
         (println "Badly formatted files:")
-        (println (join "\n" all-long-lines))
-        (linting-error-details-for-files details all-long-lines (str  "Line length exceeds " max-line-length))
+        (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) all-long-lines)))
+        (add-issue details {:description (str "Line length exceeds " max-line-length) :type :long-lines :details all-long-lines})
         true))))
 
 (defn trailing-whitespace
@@ -154,14 +149,14 @@
                            (keep-indexed
                             (fn [idx line]
                               (when (re-seq #"\s+$" line)
-                                (trim (join ":" [(.getAbsolutePath f) (inc idx) line]))))
+                                {:file (.getAbsolutePath f) :line (inc idx) :content line}))
                             (line-seq r)))))
         trailing-whitespace-lines (flatten (map indexed-lines source-files))]
     (if (empty? trailing-whitespace-lines)
       (println "No lines found.")
       (do (println "Badly formatted files:")
-          (println (join "\n" trailing-whitespace-lines))
-          (linting-error-details-for-files trailing-whitespace-lines (str  "Remove trailing whitespace lines"))
+          (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) trailing-whitespace-lines)))
+          (add-issue details {:description "Remove trailing whitespace lines" :type :trailing-whitespace :details trailing-whitespace-lines})
           true))))
 
 (defn trailing-blank-lines
@@ -171,13 +166,13 @@
   (let [get-last-line (fn [f]
                         (with-open [r (io/reader f)]
                           (when (re-matches #"^\s*$" (last (line-seq r)))
-                            (.getAbsolutePath f))))
+                            {:file (.getAbsolutePath f)})))
         bad-files (filter some? (map get-last-line source-files))]
     (if (empty? bad-files)
       (println "No files found.")
       (do (println "Badly formatted files:")
-          (println (join "\n" bad-files))
-          (linting-error-details-for-files bad-files (str  "Remove blank line at the end of file."))
+          (println (join "\n" (mapv #(trim (:file %)) bad-files)))
+          (add-issue details {:description "Remove blank line at the end of file." :type :trailing-blank-lines :details bad-files})
           true))))
 
 (defn bad-roots
@@ -190,21 +185,14 @@
                            (keep-indexed
                             (fn [idx line]
                               (when (re-seq #"\(with-redefs" line)
-                                (trim (join ":" [(.getAbsolutePath f) (inc idx) line]))))
+                                {:file (.getAbsolutePath f) :line (inc idx) :content line}))
                             (line-seq r)))))
         bad-lines (flatten (map indexed-lines source-files))]
     (if (empty? bad-lines)
       (println "No with-redefs found.")
       (do (println "with-redefs found in source directory:")
-          (println (join "\n" bad-lines))
-          (doseq [entry bad-lines]
-            (let [file ((clojure.string/split entry #":") 0)
-                  col  ((clojure.string/split entry #":") 1)
-                  line ((clojure.string/split entry #":") 2)]
-              (add-issue details {:file file
-                                  :line line
-                                  :column col
-                                  :description "Found with-redefs invokation"})))
+          (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) bad-lines)))
+          (add-issue details {:description "Found with-redefs invokations" :type :var-redefs :details bad-lines})
           true))))
 
 (defn missing-doc-strings
