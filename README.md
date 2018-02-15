@@ -85,7 +85,20 @@ In order to allow third party library consumers to decide on issue reporting app
 Results can look as follows:
 
 ```clj
-{:failures ("name-collisions"), :details [{:description "Arguments colliding with core functions", :type :name-collisions, :issues [{:file #'bikeshed.core/colliding-arguments, :content "map', 'first'"}]}]}
+{:failures
+  ("long-lines" "var-redefs" "name-collisions"),
+ :details [
+  {:description "Line length exceeds 80", :type :long-lines, :issues (
+    {:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 301, :content "                        (let [join-args #(str (clojure.string/join \"' '\" %) \"'\")]"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 349, :content "                                                 :max-line-length max-line-length)"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 352, :content "                  (trailing-whitespace details all-files))"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 354, :content "                                         (trailing-blank-lines details all-files))"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 358, :content "                                    (missing-doc-strings details project verbose))"})}
+  {:description "Found with-redefs calls", :type :var-redefs, :issues (
+    {:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 18, :content "  (with-redefs [+ -]"} 
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 201, :content "                              (when (re-seq #\"\\(with-redefs\" line)"})}
+  {:description "Arguments colliding with core functions", :type :name-collisions, :issues [
+    {:file #'bikeshed.core/colliding-arguments, :content "map' 'first'"}]}]}
 ```
 As You can see the record contains two root entries:
 - failures - which is a brief summary on what linting methods have failed.

@@ -117,6 +117,9 @@
     {(str namespace-name) (and (boolean doc)
                                (not= "" doc))}))
 
+(defn- format-issue [issue]
+  (trim (str (:file issue) ":" (:line issue) ":" (:content issue))))
+
 (defn long-lines
   "Complain about lines longer than <max-line-length> characters.
   max-line-length defaults to 80."
@@ -128,15 +131,20 @@
                            (keep-indexed
                             (fn [idx line]
                               (when (> (count line) max-line-length)
-                                {:file (.getAbsolutePath f) :line (inc idx) :content line}))
+                                {:file (.getAbsolutePath f)
+                                 :line (inc idx)
+                                 :content line}))
                             (line-seq r)))))
         all-long-lines (flatten (map indexed-lines source-files))]
     (if (empty? all-long-lines)
       (println "No lines found.")
       (do
         (println "Badly formatted files:")
-        (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) all-long-lines)))
-        (add-issue details {:description (str "Line length exceeds " max-line-length) :type :long-lines :issues all-long-lines})
+        (println (join "\n" (mapv format-issue all-long-lines)))
+        (add-issue details {:description (str "Line length exceeds "
+                                               max-line-length)
+                            :type :long-lines
+                            :issues all-long-lines})
         true))))
 
 (defn trailing-whitespace
@@ -149,14 +157,18 @@
                            (keep-indexed
                             (fn [idx line]
                               (when (re-seq #"\s+$" line)
-                                {:file (.getAbsolutePath f) :line (inc idx) :content line}))
+                                {:file (.getAbsolutePath f)
+                                 :line (inc idx)
+                                 :content line}))
                             (line-seq r)))))
         trailing-whitespace-lines (flatten (map indexed-lines source-files))]
     (if (empty? trailing-whitespace-lines)
       (println "No lines found.")
       (do (println "Badly formatted files:")
-          (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) trailing-whitespace-lines)))
-          (add-issue details {:description "Remove trailing whitespace lines" :type :trailing-whitespace :issues trailing-whitespace-lines})
+          (println (join "\n" (mapv format-issue trailing-whitespace-lines)))
+          (add-issue details {:description "Remove trailing whitespace lines"
+                              :type :trailing-whitespace
+                              :issues trailing-whitespace-lines})
           true))))
 
 (defn trailing-blank-lines
@@ -172,7 +184,9 @@
       (println "No files found.")
       (do (println "Badly formatted files:")
           (println (join "\n" (mapv #(trim (:file %)) bad-files)))
-          (add-issue details {:description "Remove blank line at the end of file." :type :trailing-blank-lines :issues bad-files})
+          (add-issue details {:description "Remove blank line at the end"
+                              :type :trailing-blank-lines
+                              :issues bad-files})
           true))))
 
 (defn bad-roots
@@ -185,14 +199,18 @@
                            (keep-indexed
                             (fn [idx line]
                               (when (re-seq #"\(with-redefs" line)
-                                {:file (.getAbsolutePath f) :line (inc idx) :content line}))
+                                {:file (.getAbsolutePath f)
+                                 :line (inc idx)
+                                 :content line}))
                             (line-seq r)))))
         bad-lines (flatten (map indexed-lines source-files))]
     (if (empty? bad-lines)
       (println "No with-redefs found.")
       (do (println "with-redefs found in source directory:")
-          (println (join "\n" (mapv #(trim (str (:file %) ":" (:line %) ":" (:content %))) bad-lines)))
-          (add-issue details {:description "Found with-redefs invokations" :type :var-redefs :issues bad-lines})
+          (println (join "\n" (mapv format-issue bad-lines)))
+          (add-issue details {:description "Found with-redefs calls"
+                              :type :var-redefs
+                              :issues bad-lines})
           true))))
 
 (defn missing-doc-strings
@@ -241,13 +259,19 @@
         (println "\nNamespaces without docstrings:")
         (doseq [[ns-name _] (sort no-ns-doc)]
           (println ns-name)
-          (swap! issues conj {:file " " :content (str "Namespace without docstrings: " ns-name)})))
+          (swap! issues conj {:file " "
+                              :content (str "Namespace without docstrings: "
+                                             ns-name)})))
       (when verbose
         (println "\nMethods without docstrings:")
         (doseq [[method _] (sort no-docstrings)]
           (println method)
-          (swap! issues conj {:file " " :content (str "Method without docstrings: " method)})))
-      (add-issue details {:description "No docstrings" :type :docstrings :issues @issues})
+          (swap! issues conj {:file " "
+                              :content (str "Method without docstrings: "
+                                             method)})))
+      (add-issue details {:description "No docstrings"
+                          :type :docstrings
+                          :issues @issues})
       (or (-> no-docstrings count pos?)
           (-> no-ns-doc count pos?)))
     (catch Throwable t
@@ -272,7 +296,11 @@
         source-files   (mapcat #(-> % io/file
                                     ns-find/find-clojure-sources-in-dir)
                                (flatten (get-all project :source-paths)))
-        all-publics    (mapcat read-namespace source-files)]
+        all-publics   (mapcat read-namespace source-files)
+        add-collision (fn [func args]
+                        (let [join-args #(str (clojure.string/join "' '" %) "'")]
+                          (swap! collisions conj {:file func
+                                                  :content (join-args args)})))]
     (->> all-publics
          (map (fn [function]
                 (let [args (wrong-arguments function core-functions)]
@@ -284,11 +312,18 @@
                         (println (str function ": '"
                                       (clojure.string/join "', '" args) "'")
                                  "are colliding with core functions"))
-                      (swap! collisions conj {:file function
-                                              :content (str (clojure.string/join "', '" args) "'")})))
+                      (add-collision function args)))
                   (count args))))
          (apply +)
          (pos?))))
+
+(defn check-name-collisions [details project]
+  (let [collisions (atom [])
+        result (check-all-arguments collisions project)]
+    (add-issue details {:description "Arguments colliding with core functions"
+                        :type :name-collisions
+                        :issues @collisions})
+    result))
 
 (defn visible-project-files
   "Given a project and list of keys (such as `:source-paths` or `:test-paths`,
@@ -308,26 +343,21 @@
   (let [details (atom [])
         all-files (visible-project-files project :source-paths :test-paths)
         source-files (visible-project-files project :source-paths)
-        results {:long-lines           (when (check? :long-lines)
-                                         (if max-line-length
-                                           (long-lines details all-files
-                                                       :max-line-length max-line-length)
-                                           (long-lines details all-files)))
+        results {:long-lines     (when (check? :long-lines)
+                                   (if max-line-length
+                                     (long-lines details all-files
+                                                 :max-line-length max-line-length)
+                                     (long-lines details all-files)))
                  :trailing-whitespace  (when (check? :trailing-whitespace)
                                          (trailing-whitespace details all-files))
                  :trailing-blank-lines (when (check? :trailing-blank-lines)
                                          (trailing-blank-lines details all-files))
-                 :var-redefs           (when (check? :var-redefs)
-                                         (bad-roots details source-files))
-                 :bad-methods          (when (check? :docstrings)
-                                         (missing-doc-strings details project verbose))
-                 :name-collisions      (when (check? :name-collisions)
-                                         (let [collisions (atom [])
-                                               result (check-all-arguments collisions project)]
-                                           (add-issue details {:description "Arguments colliding with core functions"
-                                                               :type :name-collisions
-                                                               :issues @collisions})
-                                           result))}
+                 :var-redefs      (when (check? :var-redefs)
+                                    (bad-roots details source-files))
+                 :bad-methods     (when (check? :docstrings)
+                                    (missing-doc-strings details project verbose))
+                 :name-collisions (when (check? :name-collisions)
+                                    (check-name-collisions details project))}
         failures (->> results
                       (filter second)
                       (map first)
