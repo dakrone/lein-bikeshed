@@ -78,6 +78,32 @@ You can also add the `:bikeshed` option map directly to your `project.clj`:
   :dependencies [[clj-http "3.3.0"]])
 ```
 
+## Using Bikeshed Processing Results
+
+In order to allow third party library consumers to decide on issue reporting approach, bikeshed returns a record containing processing details:
+
+Results can look as follows:
+
+```clj
+{:failures
+  ("long-lines" "var-redefs" "name-collisions"),
+ :details [
+  {:description "Line length exceeds 80", :type :long-lines, :issues (
+    {:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 301, :content "                        (let [join-args #(str (clojure.string/join \"' '\" %) \"'\")]"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 349, :content "                                                 :max-line-length max-line-length)"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 352, :content "                  (trailing-whitespace details all-files))"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 354, :content "                                         (trailing-blank-lines details all-files))"}
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 358, :content "                                    (missing-doc-strings details project verbose))"})}
+  {:description "Found with-redefs calls", :type :var-redefs, :issues (
+    {:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 18, :content "  (with-redefs [+ -]"} 
+	{:file "C:\\PROGRAMMING\\github\\lein-bikeshed\\src\\bikeshed\\core.clj", :line 201, :content "                              (when (re-seq #\"\\(with-redefs\" line)"})}
+  {:description "Arguments colliding with core functions", :type :name-collisions, :issues [
+    {:file #'bikeshed.core/colliding-arguments, :content "map' 'first'"}]}]}
+```
+As You can see the record contains two root entries:
+- failures - which is a brief summary on what linting methods have failed.
+- details - which contain processing details. This entry can contain a lot of data depending on linting method being invoked. General convention is that it contains a vector of reported issues and each issue in that vector is composed of: file, content (which may vary depending on function), line (optional).
+
 ## License
 
 Copyright © 2012 Matthew Lee Hinman & Sonian
